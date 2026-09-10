@@ -31,10 +31,11 @@ def read_for(seconds):
             except BlockingIOError: pass
     return got
 
-print(f"port {port}, {baud} 8N1")
+print(f"port {port}, {baud} 8N1 — whole check takes ~35 s", flush=True)
 idle = read_for(3.0)
-print(f"1. idle 3 s: {len(idle)} bytes {idle[:40]!r}")
+print(f"1. idle 3 s: {len(idle)} bytes {idle[:40]!r}", flush=True)
 
+print("2. sending 256 byte values one at a time, 100 ms each — about 26 s ...", flush=True)
 missing, wrong = [], []
 for v in range(256):
     os.write(fd, bytes([v]))
