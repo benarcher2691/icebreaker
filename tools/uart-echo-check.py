@@ -45,10 +45,24 @@ for v in range(256):
 print(f"2. 256 values one at a time: {256 - len(missing) - len(wrong)} echoed exactly, "
       f"{len(missing)} missing {[hex(v) for v in missing][:8]}, {len(wrong)} altered {wrong[:4]}")
 
+print("3. burst behaviour (informational — the factory echo has no buffer, so long bursts lose bytes):", flush=True)
+burst7_ok = False
 for n in (7, 64, 256):
     payload = bytes((i * 7 + 3) & 0xFF for i in range(n))
     os.write(fd, payload)
     back = read_for(1.0)
-    print(f"3. burst of {n:>3} bytes back-to-back: {len(back):>3} returned, "
-          f"{'exact' if back == payload else 'NOT exact'}")
+    exact = back == payload
+    if n == 7: burst7_ok = exact
+    print(f"   burst of {n:>3} bytes back-to-back: {len(back):>3} returned"
+          f"{'' if exact else f', {n - len(back)} lost'}")
 os.close(fd)
+
+link_ok = not missing and not wrong and burst7_ok
+print()
+if link_ok:
+    print("PASS — the board echoes every byte; USB, FTDI channel B and the FPGA's UART pins all work.")
+    print("       Lost bytes in the 64/256 bursts are the factory design's unbuffered echo, not a link fault.")
+else:
+    print("FAIL — bytes missing or altered even one at a time; check the port, the baud rate, or whether")
+    print("       a different design than the factory echo is loaded.")
+sys.exit(0 if link_ok else 1)

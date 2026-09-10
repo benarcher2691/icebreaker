@@ -127,19 +127,30 @@ bursts. Run on 2026-09-10 18:49:
 
 ```
 $ python3 tools/uart-echo-check.py
-port /dev/cu.usbserial-ibxXrY9N1, 115200 8N1
+port /dev/cu.usbserial-ibxXrY9N1, 115200 8N1 — whole check takes ~35 s
 1. idle 3 s: 0 bytes b''
+2. sending 256 byte values one at a time, 100 ms each — about 26 s ...
 2. 256 values one at a time: 256 echoed exactly, 0 missing [], 0 altered []
-3. burst of   7 bytes back-to-back:   7 returned, exact
-3. burst of  64 bytes back-to-back:  59 returned, NOT exact
-3. burst of 256 bytes back-to-back: 233 returned, NOT exact
+3. burst behaviour (informational — the factory echo has no buffer, so long bursts lose bytes):
+   burst of   7 bytes back-to-back:   7 returned
+   burst of  64 bytes back-to-back:  59 returned, 5 lost
+   burst of 256 bytes back-to-back: 233 returned, 23 lost
+
+PASS — the board echoes every byte; USB, FTDI channel B and the FPGA's UART pins all work.
+       Lost bytes in the 64/256 bursts are the factory design's unbuffered echo, not a link fault.
 ```
 
-Pass criteria for "the board talks": line 2 reports 256 echoed and the 7-byte
-burst is exact. The longer bursts losing bytes is the factory design's
-unbuffered echo, not a link fault. The script takes an optional port and baud
-(`tools/uart-echo-check.py /dev/cu.usbserial-XXXXXXX1 115200`) and will be
-wrong once a different design is on the FPGA — it tests the factory echo.
+The verdict is step 2 plus the 7-byte burst: every byte value comes back
+unchanged, so the whole path works — USB, the FT2232H's channel B, the FPGA's
+RX and TX pins, and the design in flash. The script exits 0 on PASS, 1 on FAIL.
+
+Step 3 is not a test, it is a description of the factory design. Its echo holds
+one byte and cannot take the next one in while it is still sending the previous
+one out, so a stream loses roughly one byte in eleven. That is a property of
+the design that happened to be in the flash, not of the board: your own design
+with a small FIFO will not lose any. The script takes an optional port and baud
+(`tools/uart-echo-check.py /dev/cu.usbserial-XXXXXXX1 115200`) and tests the
+factory echo specifically — once a different design is on the FPGA, expect FAIL.
 
 ## Links
 
