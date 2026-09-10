@@ -119,6 +119,28 @@ more useful needs a design of your own on the FPGA.
 $ picocom -b 115200 /dev/cu.usbserial-ibxXrY9N1     # type; each key echoes. Ctrl-A Ctrl-X to quit
 ```
 
+### The communication check, reproducible
+
+`tools/uart-echo-check.py` is the probe, stdlib only. It opens channel B raw at
+115200 8N1, listens for a banner, sends every byte value on its own, then three
+bursts. Run on 2026-09-10 18:49:
+
+```
+$ python3 tools/uart-echo-check.py
+port /dev/cu.usbserial-ibxXrY9N1, 115200 8N1
+1. idle 3 s: 0 bytes b''
+2. 256 values one at a time: 256 echoed exactly, 0 missing [], 0 altered []
+3. burst of   7 bytes back-to-back:   7 returned, exact
+3. burst of  64 bytes back-to-back:  59 returned, NOT exact
+3. burst of 256 bytes back-to-back: 233 returned, NOT exact
+```
+
+Pass criteria for "the board talks": line 2 reports 256 echoed and the 7-byte
+burst is exact. The longer bursts losing bytes is the factory design's
+unbuffered echo, not a link fault. The script takes an optional port and baud
+(`tools/uart-echo-check.py /dev/cu.usbserial-XXXXXXX1 115200`) and will be
+wrong once a different design is on the FPGA — it tests the factory echo.
+
 ## Links
 
 Board and vendor:
